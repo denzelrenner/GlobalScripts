@@ -13,7 +13,7 @@ class FastaRecord():
 
         # when outputting the sequence we want to preserve the original structure of the input file including new lines
         self.output_sequence = ''.join(array_of_sequences)
-        self.output_header = header.rstrip('\n') + '\n'
+        self.output_header = ">" + header.rstrip('\n') + '\n'
 
         # get the number of each base
         self.A_count,self.C_count,self.T_count,self.G_count = find_ACTG_content(sequence=self.sequence)
@@ -80,7 +80,7 @@ def fasta_to_dict(FastaData:list) -> dict:
     return RefDict
 
 # create dict with scaffold name as key
-def fasta_to_dict_origina(FastaData:list):
+def fasta_to_dict_original(FastaData:list):
 
     # scaffold and their sequence will be stored here
     RefDict = {}
@@ -116,9 +116,58 @@ def fasta_to_dict_origina(FastaData:list):
 
     return RefDict
 
-class GFFfile():
+class Gff3Record():
 
-    def __init__(self):
-        pass
+    def __init__(self,gff_line:str,info_col_sep:str=';'):
 
+        # breakdown the line from the gff
+        self.complete_line = gff_line.split('\t')
+
+        self.chr = self.complete_line[0]
+        self.source = self.complete_line[1]
+        self.feature = self.complete_line[2]
+        self.start = self.complete_line[3]
+        self.end = self.complete_line[4]
+        self.score = self.complete_line[5]
+        self.strand = self.complete_line[6]
+        self.phase = self.complete_line[7]
+        self.info = self.complete_line[8]
+
+        if ';' in self.info:
+            self.info_parsed = {i.split('=')[0].rstrip():i.split('=')[1].rstrip() for i in self.info.split(info_col_sep)} # need to write something to handle if the info field has no =
+        
+        else:
+            self.info_parsed = {'ID':self.info.rstrip()}
+
+    # return the full line as was given in the input data
+    def return_line(self):
+        
+        return '\t'.join(self.complete_line)
+    
+    # return the full line with only a specific tag from the info column
+    def return_line_tag_only(self,tag:str):
+
+        info = self.info_parsed[tag]
+
+        line = self.complete_line
+        line[8] = info
+
+        return '\t'.join(line)
+
+    # print line as a bed file
+    def return_line_as_bed(self):
+
+        return '\t'.join([self.chr,self.start,self.end])
+    
+    # print line as bed file with info 
+
+    def return_line_as_bed_with_tag(self,tag:str):
+
+        info = self.info_parsed[tag]
+
+        return '\t'.join([self.chr,self.start,self.end,info])
+    
+    def return_line_as_bed_no_tag(self):
+
+        return '\t'.join([self.chr,self.start,self.end,self.info])
 
