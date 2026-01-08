@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import subprocess
 class FastaRecord():
 
     def __init__(self,header:str,array_of_sequences:str):
@@ -134,11 +135,16 @@ class Gff3Record():
         self.info = self.complete_line[8]
 
         if ';' in self.info:
-            self.info_parsed = {i.split('=')[0].rstrip():i.split('=')[1].rstrip() for i in self.info.split(info_col_sep)} # need to write something to handle if the info field has no =
+            self.info_parsed = {i.split('=')[0].rstrip():i.split('=')[1].rstrip() for i in self.info.split(info_col_sep) if '=' in i} # need to write something to handle if the info field has no =
         
         else:
             self.info_parsed = {'ID':self.info.rstrip()}
 
+    # rebuild and return a tab separated complete line, this way if we change the value in a column it can be reflected correctly
+    def rebuild_and_return_line(self):
+        
+        return '\t'.join([self.chr,self.source,self.feature,self.start,self.end,self.score,self.strand,self.phase,self.info])
+    
     # return the full line as was given in the input data
     def return_line(self):
         
@@ -171,3 +177,66 @@ class Gff3Record():
 
         return '\t'.join([self.chr,self.start,self.end,self.info])
 
+
+#### Terminal ####
+
+# general useful functions
+def terminal_pipe(cmd): 
+    stdout,stderr = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE,stderr=subprocess.PIPE).communicate()
+
+    return (stdout.decode("utf-8").strip(' \n'),stderr.decode("utf-8").strip(' \n'))
+
+# shell is True, so you can use commands like pipes etc
+def terminal_pipe_st(cmd):
+    
+    stdout,stderr = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE).communicate()
+
+    return (stdout.decode("utf-8").strip(' \n'),stderr.decode("utf-8").strip(' \n'))
+
+
+
+#### Blobtools ####
+
+# function to take index values in blobdir json
+def index_blobdir_json(data:dict,key:str='values') -> dict:
+
+    # create out dict
+    out_dict = {}
+
+    # store list
+    vals = data[key]
+
+    # index list
+    for i in range(len(vals)):
+
+        out_dict[i] = vals[i]
+    
+    return out_dict
+
+
+#### Fasta Files ####
+
+# function to subset an entire fasta file based on a list of records we want to keep
+def subset_whole_fasta(FastaRefDict:dict,records:list) -> dict:
+
+    filtered_fasta = {}
+
+    for header,record in FastaRefDict.items():
+
+        if record.header in records:
+            filtered_fasta[record.header] = record
+
+    return filtered_fasta
+
+# output fasta files
+def output_fasta_file(FastaRefDict:dict,output_directory:str,file_name:str) -> None:
+
+    # create outfile
+    with open(f'{output_directory}/{file_name}','w') as outfile:
+
+        # only one sequence in the dict but we can safely loop
+        for header,record in FastaRefDict.items():
+
+            # write output
+            outfile.write(record.output_header)
+            outfile.writelines(record.output_sequence)
